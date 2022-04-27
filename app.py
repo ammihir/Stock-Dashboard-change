@@ -60,6 +60,69 @@ elif choose == "Portfolio Engineering":
     st.write("mCARLO")
     
 elif choose == "Analysis":
-    st.write("analysis")
     
+    st.markdown(""" <style> .font {
+    font-size:35px ; font-family: 'Cooper Black'; color: #FF9633;} 
+    </style> """, unsafe_allow_html=True)
+    st.markdown('<p class="font">Financial Dashboard</p>', unsafe_allow_html=True)
+
+    #st.subheader('Equity Data')
+    st.markdown('The data will be pulled from Yahoo finances')
+
+
+    st.title('Fundamental Analysis')
+
+    #st.header('This is the header below')
+
+    tickers = ('idfc.ns','HDFCBANK.NS' ,'HDB','^NSEI','ABB')
+
+    dropdown = st.selectbox('Pick your stock', tickers)
+
+
+
+    start  =st.date_input('Start',value = pd.to_datetime('2021-01-01'))
+    end = st.date_input('End',value = pd.to_datetime('today'))
+
+    ticker = yf.Ticker(dropdown).info
+
+
+    import datetime
+    end_52 = pd.to_datetime('today').date()
+    start_52 = end_52 - datetime.timedelta(365)
+
+    df_52 = yf.download(dropdown, start_52, end_52)
+
+
+    st.write('52-high',round(df_52['Adj Close'].min(),1))
+    st.write('Current Price', ticker['currentPrice'])
+    st.write('52-low',round(df_52['Adj Close'].max(),1))
+    st.write('PEG ratio', ticker['pegRatio'])
+
+    st.write('Market Cap', ticker['marketCap'])
+
+
+
+
+    #st.text(hdb['sector'])
+
+    def relativeret(df):
+        rel = df.pct_change()
+        cumret = (1+rel).cumprod()-1
+        cumret = cumret.fillna(0)
+        return cumret
+
+    if len(dropdown)  > 0:
+        #df = yf.download(dropdown, start, end)['Adj Close']
+
+        df = relativeret(yf.download(dropdown, start, end)['Adj Close'])
+        st.write("**BELOW IS RETURNS**")   
+        st.line_chart(df)
+
+    st.write("**BELOW IS CLOSING PRICE**")    
+
+    st.line_chart(yf.download(dropdown, start, end)['Adj Close'])
+
+
+
+
     
