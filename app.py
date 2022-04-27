@@ -57,7 +57,150 @@ elif choose == "Forecasting":
     
     
 elif choose == "Portfolio Engineering":
-    st.write("mCARLO")
+    def montecarlo(df):
+
+        daily_returns = df.pct_change()
+
+        #st.write(daily_returns)
+
+
+        avg_daily_returns = {}
+        for i in range(0,len(selected_stock)):
+            avg_daily_returns['avg_daily_returns_'+selected_stock[i]] = daily_returns.mean()[selected_stock[i]+'_df']
+
+
+        #st.write(avg_daily_returns)
+
+        std_daily_returns = {}
+        for i in range(0,len(selected_stock)):
+            std_daily_returns['std_daily_returns_'+selected_stock[i]] = daily_returns.std()[selected_stock[i]+'_df']    
+
+        num_simulations = 100
+        num_trading_days = 252
+
+        last_prices = {} 
+        for i in range(0,len(selected_stock)):     
+            last_prices['last_price_' + selected_stock[i] ] = df[selected_stock[i]+'_df'][-1]
+
+        portfolio_cumulative_returns = pd.DataFrame()
+
+        for n in range(num_simulations):
+
+            simulated_price_df = pd.DataFrame()
+
+            simulated_prices = {}
+            for i in range(0,len(selected_stock)):
+                simulated_prices['simulated_prices_'+selected_stock[i]] = [last_prices['last_price_' + selected_stock[i]]]
+
+
+            #st.write(simulated_prices)
+
+
+            single_sim_price = {}
+
+            for j in range(0,len(selected_stock)):
+                for i in range(num_trading_days):
+
+
+                    single_sim_price["single_sim_price"+selected_stock[j]] = simulated_prices['simulated_prices_'+selected_stock[j]][-1] * (1 + np.random.normal(avg_daily_returns['avg_daily_returns_'+selected_stock[j]], std_daily_returns['std_daily_returns_'+selected_stock[j]]))
+
+
+                    simulated_prices['simulated_prices_'+selected_stock[j]].append(single_sim_price["single_sim_price"+selected_stock[j]])
+
+
+
+            simulated_price_dict={}
+            for i in range(0,len(selected_stock)):
+                simulated_price_dict['simulated_price_'+selected_stock[i]] = pd.Series(simulated_prices['simulated_prices_'+selected_stock[i]])
+
+            simulated_price_df = pd.concat(simulated_price_dict.values(), axis = 1).set_axis(b_dictionary, axis=1)    
+
+            simulated_daily_returns = simulated_price_df.pct_change()        
+
+            weights = list(a_dictionary.values())
+            base = 100
+            weights = [x /100 for x in weights]
+            #weights  = [0.25,0.25,0.25,0.25]
+
+
+            portfolio_daily_returns = simulated_daily_returns.dot(weights)        
+
+            portfolio_cumulative_returns[f"Simulation {n+1}"] = (1 + portfolio_daily_returns.fillna(0)).cumprod()
+
+        st.line_chart(portfolio_cumulative_returns)
+
+        ending_cumulative_returns = portfolio_cumulative_returns.iloc[-1, :]
+        ending_cumulative_returns.head()
+        ending_cumulative_returns.plot(kind="hist", bins=10) 
+
+
+        confidence_interval = ending_cumulative_returns.quantile(q=[0.025, 0.975])
+
+        initial_investment = 10000
+
+    # Calculate investment profit/loss of lower and upper bound cumulative portfolio returns
+        investment_pnl_lower_bound = initial_investment * confidence_interval.iloc[0]
+        investment_pnl_upper_bound = initial_investment * confidence_interval.iloc[1]
+
+    # Print the results
+        print(f"There is a 95% chance that an initial investment of $10,000 in the portfolio"
+          f" over the next 252 trading days will end within in the range of"
+          f" ${investment_pnl_lower_bound} and ${investment_pnl_upper_bound}")
+
+        st.write('There is a 95% chance that an initial investment of $10,000 in the portfolio over next year/252 will be in range',investment_pnl_lower_bound,'and',investment_pnl_upper_bound)
+
+
+
+
+
+    st.title('Monte Carlo Simulations')
+    stocks = ('GOOG', 'AAPL', 'MSFT', 'GME','idfc.ns')
+    selected_stock = st.multiselect('Create a portfolio', stocks)
+    st.write("Total stocks seleted",len(selected_stock))
+
+
+    #st.write('Input something')
+
+
+    a_dictionary = {}
+    for i in range(0,len(selected_stock)):
+        a_dictionary[selected_stock[i]]  = st.number_input('Allocation for '+selected_stock[i],key=i, min_value =10, max_value =100, step =10)
+
+
+
+    st.write(a_dictionary)
+
+
+    end_date = pd.to_datetime('today').date()
+    start_date = end_date - timedelta(365)
+
+
+
+    b_dictionary = {}
+    for i in range(0,len(selected_stock)):
+        b_dictionary[selected_stock[i]+'_df']  = yf.download(stocks[i], start_date, end_date)['Adj Close']
+
+    #st.write(b_dictionary)
+
+    try:
+    #we are converting the dictionaries into a df, with the keys as the column names
+        df = pd.concat(b_dictionary.values(), axis = 1).set_axis(b_dictionary, axis=1)
+
+    except:
+        st.write('PLEASE ENTER A STOCK')
+    #st.write(df)
+
+
+
+
+    if sum(a_dictionary.values()) == 100:
+        st.write("Thanks! Please wait for the calculations")
+        montecarlo(df)
+
+    else:
+        st.write("Allocations should be 100%")
+
+
     
 elif choose == "Analysis":
     
