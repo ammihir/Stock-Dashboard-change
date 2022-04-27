@@ -6,3 +6,4 @@ pystan
 streamlit_option_menu
 plotly
 matplotlib
+prophet
